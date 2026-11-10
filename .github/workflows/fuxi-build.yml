@@ -115,6 +115,7 @@ jobs:
         with:
           pattern: fuxi-iig-pregen-*
           path: deps/iig-pregen-download
+          repository: bangprovn/ios-fuxi
           run-id: ${{ inputs.iig_run }}
           github-token: ${{ github.token }}
       - name: Choose pregenerated iig outputs
