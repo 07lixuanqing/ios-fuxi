@@ -56,7 +56,7 @@ rm -rf "$MNT/.fseventsd" "$MNT/.Spotlight-V100"
 sync; umount "$MNT"
 check after
 python3 -I /tools/hfs-journal-replay.py "$IMG" --mark-journaled
-python3 -I /tools/hfs-journal-replay.py "$IMG" | grep -q JOURNAL_EMPTY || { echo "journal not empty after edit" >&2; exit 7; }
+python3 -I /tools/hfs-journal-replay.py "$IMG" | grep -Eq "JOURNAL_EMPTY|JOURNAL_NEEDS_INIT" || { echo "journal not empty after edit" >&2; exit 7; }
 losetup -d "$dev"; trap - EXIT
 echo ROOT_EDIT_DONE
 ' fuxi-root-edit "$@"

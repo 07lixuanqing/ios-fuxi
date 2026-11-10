@@ -24,6 +24,8 @@ import argparse, os, struct, sys
 
 JH_MAGIC, ENDIAN_MAGIC = 0x4A4E4C78, 0x12345678
 JIB_JOURNAL_IN_FS = 0x1
+JIB_JOURNAL_OTHER_DEVICE = 0x2
+JIB_JOURNAL_NEEDS_INIT = 0x4
 JH_CKSUM_SIZE, BLH_CKSUM_SIZE, BINFO_SIZE = 44, 32, 16
 BLHDR_CHECK_CHECKSUMS = 0x1
 
@@ -55,8 +57,18 @@ def main():
     ji = rd(jib * bsize, 52)
     jflags = struct.unpack(">I", ji[:4])[0]
     joff, jsize = struct.unpack(">QQ", ji[36:52])
-    if not jflags & JIB_JOURNAL_IN_FS:
+    if not jflags & JIB_JOURNAL_IN_FS or jflags & JIB_JOURNAL_OTHER_DEVICE:
         sys.exit("journal is not inside the volume")
+    volume_bytes = bsize * struct.unpack(">I", vh[44:48])[0]
+    if jsize < 512 or joff % 512 or jsize % 512 or joff + jsize > volume_bytes:
+        sys.exit("journal is outside the volume or not sector aligned")
+    if volume_bytes > os.fstat(fd).st_size:
+        sys.exit("volume exceeds the image")
+    # TN1150: a newly formatted journal with this bit has no transactions
+    # to replay; the first journaling mount initializes its header.
+    if jflags & JIB_JOURNAL_NEEDS_INIT:
+        print("JOURNAL_NEEDS_INIT (no transactions to replay)")
+        return
 
     raw = rd(joff, 512)
     for e in "<>":
