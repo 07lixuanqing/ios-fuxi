@@ -42,4 +42,9 @@ replace('warning "Skipping patch ${PATCH}',
         '                    exit 1\n'
         '                fi\n'
         '                warning "Skipping patch ${PATCH}')
+# Large KDK release transfers can end with curl 56 on hosted runners.
+# Retry receive failures too, retaining the same release and installer checks.
+replace('curl --progress-bar --max-time 900 --connect-timeout 60 -L -o /tmp/KDK.dmg',
+        'curl --fail --retry 5 --retry-all-errors --retry-delay 3 '
+        '--progress-bar --max-time 900 --connect-timeout 60 -L -o /tmp/KDK.dmg')
 p.write_text(text)
