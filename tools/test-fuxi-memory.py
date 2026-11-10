@@ -9,6 +9,18 @@ import adt
 spec = importlib.util.spec_from_file_location('fuxi', Path(__file__).with_name('mkadt-fuxi.py'))
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
+# Some retail FDTs split continuous high RAM into adjacent DDR ranges.
+# A gap of even one page must still reject the complete XNU + GPU window.
+base, bank = m.PHYS_BASE, m.BANK_SIZE
+split = 0xc0000000
+assert m.memory_covers([(base, bank)], base, bank)
+assert m.memory_covers([(base + split, 0x180000000), (base, split)], base, bank)
+assert m.memory_covers([(base, split), (base + split, 0),
+                        (base + split, bank - split)], base, bank)
+assert not m.memory_covers([(base, split), (base + split + 4096, bank)], base, bank)
+assert not m.memory_covers([(base, bank - 4096)], base, bank)
+assert not m.memory_covers([(base + 4096, bank)], base, bank)
+assert not m.memory_covers([], base, bank)
 for size in (m.MEM_SIZE, m.LEGACY_SIZE):
     root = m.build(smp=True, gpu_reserve=True, mem_size=size)
     blob = adt.serialize(root)

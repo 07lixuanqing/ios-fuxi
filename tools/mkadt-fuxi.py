@@ -37,6 +37,20 @@ def setprop(node, name, value):
     node.props = [(k, f, value if k == name else v) for k, f, v in node.props]
 
 
+def memory_covers(ranges, start, size):
+    """Require continuous advertised RAM, including adjacent FDT reg entries."""
+    cursor, end = start, start + size
+    for base, length in sorted(ranges):
+        if not length or base + length <= cursor:
+            continue
+        if base > cursor:
+            break
+        cursor = base + length
+        if cursor >= end:
+            return True
+    return False
+
+
 def validate_live(path, ufs_readonly=False):
     # Validate the entire used bank, including GPU scratch, against reservations.
     spec = importlib.util.spec_from_file_location('fuxi_fdt', Path(__file__).with_name('fuxi-inspect-dtb.py'))
@@ -49,7 +63,7 @@ def validate_live(path, ufs_readonly=False):
     if len(memory) % 16:
         raise ValueError('unexpected /memory cell layout')
     ranges = list(struct.iter_unpack('>QQ', memory))
-    if not any(base <= PHYS_BASE and PHYS_BASE + BANK_SIZE <= base + size for base, size in ranges):
+    if not memory_covers(ranges, PHYS_BASE, BANK_SIZE):
         raise ValueError('requested XNU RAM is outside advertised memory')
     inventory = fdt.describe(nodes, reservations)['nodes']
     for name, props in inventory.items():
