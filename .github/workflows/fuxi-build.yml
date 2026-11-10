@@ -27,7 +27,7 @@ on:
       runner:
         description: Hosted macOS image (macos-14 is unsupported from 2026-11-02)
         type: choice
-        options: [macos-14, macos-15, macos-15-intel, macos-26]
+        options: [macos-14, macos-15, macos-15-intel, macos-26, macos-26-intel]
         default: macos-15
       xcode:
         description: Preinstalled Xcode version (/Applications/Xcode_VERSION.app); 15.x only on macos-14
