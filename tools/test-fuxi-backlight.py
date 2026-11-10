@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'xnu/fuxi-backlight'
@@ -421,6 +422,11 @@ with tempfile.TemporaryDirectory(prefix='fuxi-backlight-test-') as tmp:
     path, exe = Path(tmp) / 'backlight.cpp', Path(tmp) / 'backlight'
     path.write_text(MODEL)
     subprocess.run(['clang++', '-std=c++17', '-Wall', '-Wextra', '-Werror',
-                    '-fsanitize=address,undefined', '-I', str(SRC), str(path), '-o', str(exe)], check=True)
-    subprocess.run([str(exe)], check=True)
+                    '-g', '-fsanitize=address,undefined', '-fno-sanitize-trap=all', '-I', str(SRC), str(path), '-o', str(exe)], check=True)
+    result = subprocess.run([str(exe)])
+    if result.returncode and sys.platform == 'darwin':
+        # Keep the original failure, but report the native crash location.
+        subprocess.run(['lldb', '--batch', '-o', 'run', '-o', 'bt',
+                        '-o', 'disassemble --frame', str(exe)], check=False)
+    result.check_returncode()
 print('PASS: fuxi backlight (sync, opt-in, registry shape, parser, logical power interests, startup trace, rate limits)')
